@@ -1,0 +1,7 @@
+%h1 Feed
+%ul
+  %li{"data-bind"=>"foreach: messages"}
+    .content{"data-bind"=>"text: content"}
+    .date{"data-bind"=>"text: date"}
+      
+      
