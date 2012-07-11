@@ -34,29 +34,32 @@ Cfg = OpenStruct.new
 Cfg.appname = 'Life'
 
 Cfg.platform = platform()
+Cfg.rootdir = File.dirname(__FILE__)
 Cfg.builddir = 'build'
-Cfg.cachedir = 'cache'
-Cfg.xulsdkdir = "xulrunner-sdk"
+Cfg.distdir = "#{Cfg.builddir}/dist"
 Cfg.xulversion = "14.0b6"
+Cfg.cachedir = "cache/#{Cfg.xulversion}"
+Cfg.xulsdkdir = "#{Cfg.cachedir}/xulrunner-sdk"
 Cfg.xuluri = {
-  :base=>"http://ftp.mozilla.org/pub/mozilla.org/xulrunner/releases/#{Cfg.xulversion}/sdk/",
+  :base=>"http://ftp.mozilla.org/pub/mozilla.org/xulrunner/releases/#{Cfg.xulversion}/sdk",
   :mac32 => "xulrunner-#{Cfg.xulversion}.en-US.mac-i386.sdk.tar.bz2",
   :mac64 => "xulrunner-#{Cfg.xulversion}.en-US.mac-x86_64.sdk.tar.bz2",
   :linux32 => "xulrunner-#{Cfg.xulversion}.en-US.linux-i686.sdk.tar.bz2",
   :linux64 => "xulrunner-#{Cfg.xulversion}.en-US.linux-x86_64.sdk.tar.bz2",
+}
+Cfg.xulrunuri = {
+  :base=>"http://ftp.mozilla.org/pub/mozilla.org/xulrunner/releases/#{Cfg.xulversion}/runtimes",
+  :win => "xulrunner-#{Cfg.xulversion}.en-US.win32.zip",
+  :mac => "xulrunner-#{Cfg.xulversion}.en-US.mac.tar.bz2",
+  :linux32 => "xulrunner-#{Cfg.xulversion}.en-US.linux-i686.tar.bz2",
+  :linux64 => "xulrunner-#{Cfg.xulversion}.en-US.linux-x86_64.tar.bz2",
 }
 Cfg.xulsdkfile = File.join(Cfg.cachedir,Cfg.xuluri[Cfg.platform])
 
 task :default => [:package]
 
 task :xul do
-  unless File.exist?(Cfg.xulsdkdir)
-    unless File.exist?(Cfg.xulsdkfile)
-      `mkdir -p #{Cfg.cachedir}`
-      `curl "#{Cfg.xuluri[:base]}#{Cfg.xuluri[Cfg.platform]}" > #{Cfg.xulsdkfile}`
-    end
-    `tar -xjf #{Cfg.xulsdkfile}`
-  end
+  download_cache(Cfg.xuluri[Cfg.platform],"#{Cfg.xuluri[:base]}/#{Cfg.xuluri[Cfg.platform]}","xulrunner-sdk")
 end
 
 task :clean do 
@@ -116,11 +119,11 @@ task :build do
   # build coffee
   puts "Building coffee script..."
   Dir["src/coffee/*.coffee"].each {|f|
-    `./xulrunner-sdk/bin/js -f lib/javascript/coffee-script.js -e "print(CoffeeScript.compile(read('#{f}')));" > #{Cfg.builddir}/xul/content/javascript/#{File.basename(f,'.coffee')}.js`}
+    `./#{Cfg.xulsdkdir}/bin/js -f lib/javascript/coffee-script.js -e "print(CoffeeScript.compile(read('#{f}')));" > #{Cfg.builddir}/xul/content/javascript/#{File.basename(f,'.coffee')}.js`}
   
   # build sass
-  Dir["src/scss/*.scss"].reject{|f| File.basename(f).match(/^[_.]/)}.each{|scss|
-    `sass #{scss} #{Cfg.builddir}/xul/content/css/#{File.basename(scss,".scss")}.css`}
+  Dir["src/sass/*.sass"].reject{|f| File.basename(f).match(/^[_.]/)}.each{|sass|
+    `sass #{sass} #{Cfg.builddir}/xul/content/css/#{File.basename(sass,".sass")}.css`}
 end
 
 task :package => [:xul,:clean,:build] do
@@ -132,9 +135,27 @@ task :package => [:xul,:clean,:build] do
   end
 end
 
+task :dist => [:package] do
+  `rm -rf #{Cfg.builddir}/dist`
+  puts "Checking cache for mac runtime..."
+  download_cache(Cfg.xulrunuri[:mac],"#{Cfg.xulrunuri[:base]}/#{Cfg.xulrunuri[:mac]}","mac/XUL.framework")
+  puts "Building mac dist..."
+  distribute_mac
+
+  puts "Checking cache for windows runtime..."
+  download_cache(Cfg.xulrunuri[:win],"#{Cfg.xulrunuri[:base]}/#{Cfg.xulrunuri[:win]}","win/xulrunner","unzip")
+  puts "Building windows dist..."
+  distribute_windows
+
+  puts "Checking cache for linux64 runtime..."
+  download_cache(Cfg.xulrunuri[:linux64],"#{Cfg.xulrunuri[:base]}/#{Cfg.xulrunuri[:linux64]}","linux64/xulrunner")
+  puts "Building linux64 dist..."
+  distribute_linux64
+end
+
 def package_linux
   # TODO
-  package_mac
+  puts "Linux not supported for packaging yet..."
 end
 
 def package_mac
@@ -151,5 +172,53 @@ def package_mac
   `cp platform/mac/Info.plist #{basedir}`
   `cp platform/mac/life.icns #{basedir}/Resources`
   `chmod -R 755 #{Cfg.builddir}/#{Cfg.appname}.app`
+end
+
+def distribute_mac
+  dmgdir= "#{Cfg.builddir}/dist/mac"
+  `mkdir -p #{dmgdir}`
+  `ln -s /Applications #{dmgdir}/Applications`
+
+  basedir = "#{dmgdir}/#{Cfg.appname}.app/Contents"
+  xulframework = "#{Cfg.cachedir}/mac/XUL.framework"
+  ["Frameworks","Resources","MacOS"].each{|dir|`mkdir -p #{basedir}/#{dir}`}
+  `cp -R #{xulframework} #{basedir}/Frameworks`
+  `cp #{xulframework}/Versions/Current/xulrunner #{basedir}/MacOS`
+  `cp -r #{Cfg.builddir}/xul/* #{basedir}/Resources`
+  `cp platform/mac/Info.plist #{basedir}`
+  `cp platform/mac/life.icns #{basedir}/Resources`
+  `chmod -R 755 #{basedir}/..`
+end
+
+def distribute_linux64
+  appdir="#{Cfg.builddir}/dist/linux64"
+  `mkdir -p #{appdir}/Life`
+  `cp -r build/xul/ #{appdir}/Life`
+  `cp -R #{Cfg.cachedir}/linux64/xulrunner #{appdir}/Life/xulrunner`
+  `cp #{appdir}/Life/xulrunner/xulrunner-stub #{appdir}/Life/Life`
+  `cd #{appdir} && tar -cjf Life.tar.bz2 Life`
+end
+
+def distribute_windows
+  windir="#{Cfg.builddir}/dist/win"
+  `mkdir -p #{windir}/Life`
+  `cp -r build/xul/ #{windir}/Life`
+  `cp -R #{Cfg.cachedir}/win/xulrunner #{windir}/Life/xulrunner`
+  `cp #{windir}/Life/xulrunner/xulrunner-stub.exe #{windir}/Life/Life.exe`
+  `cd #{windir} && zip -r Life.zip Life`
+end
+
+def download_cache(file, url, dir, cmd="tar -xjf")
+  unless File.exist?(File.join(Cfg.cachedir,dir))
+    unless File.exist?(File.join(Cfg.cachedir,file))
+      puts "Downloading #{url} -> #{Cfg.cachedir}/#{file} ..."
+      `mkdir -p #{Cfg.cachedir}`
+      `curl #{url} > #{Cfg.cachedir}/#{file}`
+    end
+    puts "Expanding #{Cfg.cachedir}/#{file} ..."
+    `mkdir -p #{File.join(Cfg.cachedir,File.dirname(dir))}`
+    puts "cd #{File.join(Cfg.cachedir,File.dirname(dir))} && #{cmd} #{file}"
+    `cd #{File.join(Cfg.cachedir,File.dirname(dir))} && #{cmd} #{File.join(Cfg.rootdir,Cfg.cachedir,file)}`
+  end
 end
 

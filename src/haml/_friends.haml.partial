@@ -1,0 +1,11 @@
+#friends.tab-pane.fade
+  %ul{"data-bind"=>"foreach: circles"}
+    %ul
+      %ul
+        %span.name{"data-bind"=>"text: name"} 
+        (
+        %span.size{"data-bind"=>"text: profiles.length"} 
+        )
+        %ul{"data-bind"=>"foreach: profiles"}
+          %li
+            .profile{"data-bind"=>"text: display"}

@@ -1,9 +1,11 @@
-%h1 Feed
-%ul{"data-bind"=>"foreach: messages"}
-  %li
-    .date{"data-bind"=>"text: date"}
-    .from{"data-bind"=>"text: from"}
-    .to{"data-bind"=>"text: to"}
-    .content{"data-bind"=>"text: content"}
+#feed.tab-pane.fade.in.active
+  %ul{"data-bind"=>"foreach: posts"}
+    %li.post
+      .header
+        %span.from{"data-bind"=>"text: from.display"}
+        %span.date{"data-bind"=>"text: humaneDate"}
+        %span.to{"data-bind"=>"foreach: to"}
+          %span{"data-bind"=>"text: display"}
+      .content{"data-bind"=>"text: content"}
       
       

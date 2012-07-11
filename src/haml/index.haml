@@ -10,14 +10,18 @@
        
       = partial :topbar
   
-      #panels.expand
+      #panels.expand.tab-content
         = partial :feed
+        = partial :update
+        = partial :friends
 
       .footer
 
   / 3rd party libs
   %script{:type=>"application/x-javascript", :src => "javascript/jquery-1.7.2.min.js"}
   %script{:type=>"application/x-javascript", :src => "javascript/knockout-2.1.0.js"}
+  %script{:type=>"application/x-javascript", :src => "javascript/bootstrap.js"}
+  %script{:type=>"application/x-javascript", :src => "javascript/humane.js"}
   /util
   %script{:type=>"application/x-javascript", :src => "javascript/util.js"}
   %script{:type=>"application/x-javascript", :src => "javascript/jquery_plugins.js"}
