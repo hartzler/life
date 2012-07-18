@@ -1,9 +1,5 @@
-debug = (s)->
-  if s.toSource?
-    dump(s.toSource())
-  else
-    dump(s)
-  dump("\n")
+logger = new Util.Logger('Life::Controller','debug')
+logger.debug("loading...")
 
 # View Model
 class Profile
@@ -18,14 +14,12 @@ class Post
 
 # whats visible :)
 class ViewModel
-  constructor: (posts,circles,profiles,callbacks={}) ->
-    debug(posts)
-    debug(circles)
+  constructor: (callbacks={}) ->
 
     # visible
-    @posts = ko.observableArray(posts)
-    @circles = ko.observableArray(circles)
-    @profiles = ko.observableArray(profiles)
+    @posts = ko.observableArray([])
+    @circles = ko.observableArray([])
+    @profiles = ko.observableArray([])
 
     # update
     @updateTo = ko.observable()
@@ -87,13 +81,14 @@ class TestStorage
 class ImapStorage
   constructor: (@email)->
     @client = new LifeClient()
+    @client.logger = new Util.Logger("Life::DataSource",'debug')
 
   connect: (email,password,imap_server,smtp_server)->
     @client.connect(logging:true,email:email,password:password,imap_server:imap_server,smtp_server:smtp_server, @on_client_success, @on_client_error, @on_client_toggle)
 
-  on_client_success: ()-> debug("client connected...")
-  on_client_error: (msg)-> debug(msg)
-  on_client_toggle: ()-> debug("client toggle...")
+  on_client_success: ()-> logger.debug("client connected...")
+  on_client_error: (msg)-> logger.error(msg)
+  on_client_toggle: ()-> logger.debug("client toggle...")
 
   load_circle: (id)-> @client.get(id)
   load_profile: (id)-> @client.get(id)
@@ -103,21 +98,23 @@ class ImapStorage
   list_profiles: -> @client.list(undefined,"profile")
   list_posts: -> @client.list(undefined,"post")
 
-  store_circle: (m)-> @client.send("circle",[@email],m)
-  store_profile: (m)-> @client.send("profile",[@email],m)
-  store_post: (m)-> @client.send("post",(profile2view(p).atts.email for p in m.to),m)
+  store_circle: (m)-> @store("circle",[@email],m)
+  store_profile: (m)-> @store("profile",[@email],m)
+  store_post: (m)=>
+    emails = (@client.get(p).atts.email for p in m.to)
+    @store("post",emails,m)
 
   store: (type,to,m)->
-    @client.send
-      type, # tag
+    m.id ||= Util.uuid()
+    @client.send type, # tag
       to, # to 
       "Private Message", # subject
       undefined, # related
       undefined, # html
       undefined, # txt
       m, # obj
-      ()->debug("store success..."), # success
-      (msg)->debug(msg) # failure
+      ()->logger.debug("store success..."), # success
+      (msg)->logger.debug(msg) # failure
 
 
 # storage helper methods
@@ -140,37 +137,38 @@ test_storage = new TestStorage()
 storage = new ImapStorage()
 storage.on_client_success = ()->
   # insert test data...
+  if false and storage.list_circles().length < 1
+    storage.store_profile(profile) for profile in [
+        me=storage.user={display:"Me", atts:{email: email}},
+        marcus={display:"Marcus Maday", atts:{email: "marcus.maday@gmail.com"}},
+        josh={display:"Josh Sommer", atts:{email: "josh.sommer@gmail.com"}},
+        jes={display:"Jes Hartzler", atts:{email: "jeshartzler@gmail.com"}},
+        todd={display:"Todd Hartzler", atts:{email: "thartzler@technologist.com"}},
+      ]
 
-  storage.user = id:1, display:"Me", atts:{email: email}
+    storage.store_circle(circle) for circle in [
+        all={name:"All", profiles:[me.id,marcus.id,josh.id,jes.id,todd.id]},
+        friends={name:"Friends", profiles:[marcus.id,josh.id]},
+        family={name:"Family", profiles:[jes.id,todd.id]},
+      ]
+   
+    storage.store_post(post) for post in [
+        {from:marcus.id, to:[me.id], content:"Hi there buddy!", date:new Date()},
+        {from:me.id, to:[marcus.id,josh.id], content:"I love you guys!", date:new Date()},
+        {from:josh.id, to:[me.id,todd.id], content:"I'm eating...  Yum.", date:new Date()},
+      ]
 
-  storage.store_profile(profile) for profile in [
-      storage.user,
-      {id:2, display:"Marcus Maday", atts:{email: "marcus.maday@gmail.com"}},
-      {id:3, display:"Josh Sommer", atts:{email: "josh.sommer@gmail.com"}},
-      {id:4, display:"Jes Hartzler", atts:{email: "jeshartzler@gmail.com"}},
-      {id:5, display:"Todd Hartzler", atts:{email: "thartzler@technologist.com"}},
-    ]
-
-  storage.store_circle(circle) for circle in [
-      {id:1, name:"All", profiles:[1,2,3,4,5]},
-      {id:2, name:"Friends", profiles:[2,3]},
-      {id:3, name:"Family", profiles:[4,5]},
-    ]
- 
-  storage.store_post(post) for post in [
-      {id:1, from:2, to:[1], content:"Hi there buddy!", date:new Date()},
-      {id:2, from:1, to:[2,3], content:"I love you guys!", date:new Date()},
-      {id:3, from:4, to:[1,5], content:"I'm eating...  Yum.", date:new Date()},
-    ]
+  logger.debug("profiles: " + storage.list_profiles().toSource())
+  logger.debug("circles: " + storage.list_circles().toSource())
 
   # load data
-  viewModel.profiles(profile2view(p) for p in storage.list_profiles())
-  viewModel.circles(circle2view(c) for c in storage.list_circles())
-  viewModel.posts(post2view(p) for p in storage.list_posts())
-  # bind
-  ko.applyBindings(viewModel)
+  viewModel.profiles(profile2view(storage.load_profile(p)) for p in storage.list_profiles())
+  viewModel.circles(circle2view(storage.load_circle(c)) for c in storage.list_circles())
+  viewModel.posts(post2view(storage.load_post(p)) for p in storage.list_posts())
+  storage.user = p for p in viewModel.profiles() when p.display is "Me"
+  
 
-viewModel=new ViewModel([],[],[],
+viewModel=new ViewModel(
   update: (to,content)->
     post = id:new Date().getTime(), from: storage.user.id, to: [to.id], content: content, date:new Date()
     # TODO: send!
@@ -189,5 +187,8 @@ viewModel.password(password)
 $(document).ready ->
   $('ul.nav a').click (e)-> e.preventDefault(); $(this).tab('show')
 
+  # bind
+  ko.applyBindings(viewModel)
+
   # connect
-  viewModel.connect()
+  #viewModel.connect()

@@ -1,4 +1,11 @@
 #feed.tab-pane.fade.in.active
+  .connect.well
+    %form
+      %label User
+      %input{:type=>"text","data-bind"=>"value: email"}
+      %label Password
+      %input{:type=>"password","data-bind"=>"value: password"}
+      %button{"data-bind"=>"click: connect"} Connect!
   %ul{"data-bind"=>"foreach: posts"}
     %li.post
       .header
