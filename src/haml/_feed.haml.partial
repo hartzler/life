@@ -1,18 +1,46 @@
 #feed.tab-pane.fade.in.active
-  .connect.well
+  .generating{"data-bind"=>"visible: state.generating"}
+    %h2 Generating keys...
+    %img{"src"=>"chrome://life/content/images/connecting.gif"}
+  .connect{"data-bind"=>"visible: state.not_connected"}
     %form
-      %label User
+      %label Gmail
       %input{:type=>"text","data-bind"=>"value: email"}
       %label Password
       %input{:type=>"password","data-bind"=>"value: password"}
-      %button{"data-bind"=>"click: connect"} Connect!
-  %ul{"data-bind"=>"foreach: posts"}
-    %li.post
-      .header
-        %span.from{"data-bind"=>"text: from.display"}
-        %span.date{"data-bind"=>"text: humaneDate"}
-        %span.to{"data-bind"=>"foreach: to"}
-          %span{"data-bind"=>"text: display"}
-      .content{"data-bind"=>"text: content"}
-      
+      %label 
+        %input{:type=>"checkbox","data-bind"=>"checked: remember"} 
+        Remember Password
+      .submit
+        %button.btn.btn-success{"data-bind"=>"click: connect"} Connect!
+  .connecting{"data-bind"=>"fadeVisible: state.connecting"}
+    %h2 Connecting...
+    %img{"src"=>"chrome://life/content/images/connecting.gif"}
+  .rest{"data-bind"=>"fadeVisible: state.connected"}
+    .update
+      %form
+        .share-mini{"data-bind"=>"visible: share_state.mini"}
+          %input{"placeholder"=>"Share what's new...","data-bind"=>"click: function(){share_state.set_max(); $('#feed .share .content').focus()}"}
+        .share-max{"data-bind"=>"visible: share_state.max"}
+          .share
+            .content{"contenteditable"=>"true","data-bind"=>"htmlValue: updateContent", "placeholder"=>"Share what's new..."}
+          .controls{"data-bind"=>"visible: to_state.select"}
+            %label To
+            %select{"data-bind"=>"options: profiles, optionsText: 'display', value: updateTo, optionsCaption: 'Choose...'"}
+            %button.btn.btn-info{"data-bind"=>"click: to_state.set_add"} +
+          .controls{"data-bind"=>"visible: to_state.add"}
+            %label Name
+            %input{"data-bind"=>"value: updateName"}
+            %button.btn.btn-info{"data-bind"=>"click: to_state.set_select"} -
+            %label Email
+            %input{"data-bind"=>"value: updateEmail"}
+          %button.btn.btn-success{"data-bind"=>"click: update"} Share
+    %ul{"data-bind"=>"foreach: feed"}
+      %li.post
+        .header
+          %span.from{"data-bind"=>"text: from.display"}
+          %span.date{"data-bind"=>"text: humaneDate"}
+          %span.to{"data-bind"=>"foreach: to"}
+            %span{"data-bind"=>"text: display"}
+        .content{"data-bind"=>"text: content"}
       

@@ -28,4 +28,5 @@ pref('urlclassifier.updateinterval' , 172800);
 pref("app.update.enabled", false);
 pref("dom.w3c_touch_events.enabled", true);
 pref("extensions.blocklist.url", "chrome://life/content/blocklist.xml");
+pref("dom.storage.enabled", true);
 

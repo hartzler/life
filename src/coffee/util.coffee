@@ -1,5 +1,4 @@
 # util.coffee
-#   requires jquery
 #
 # General utility functions and classes.  Will be required most everywhere,
 # so be very intentional what you put here.
@@ -21,7 +20,6 @@ Util.uuid = ()->
 
 # basic log4x like class
 class Logger
-  $ = jQuery
   @levels: {error:0 ,warn:1 ,info:2 ,debug:3}
   @level_names: ['error','warn','info','debug']
 
@@ -46,7 +44,7 @@ class Logger
     @log 3,message
 
   stringify: (s) ->
-    switch $.type(s)
+    switch typeof s
       when "object" then  s.toSource()
       when "undefined", "null" then null
       else s

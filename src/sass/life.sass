@@ -1,11 +1,38 @@
 #feed
+  .connect, .connecting, .update, .generating
+    margin: 10px
+    padding: 1em
+    background-color: #eee
+    border-radius: 15px
+
+  .connecting, .generating
+    text-align: center
+
+  .update 
+    .to_toggle
+      text-align: right
+      border-radius: 3px
+      background-color: white
+      font-size: 24pt
+    .share
+      border: 1px solid #ccc
+      background-color: white
+      padding-top: 1em
+      padding-bottom: 1em
+      .content 
+        min-height: 1em
+        outline: 0px solid transparent
+        margin-right: 1em
+        margin-left: 1em
+
   ul
     list-style-type: none
-    margin: 1em
+    margin: 5px
     padding: 0em
     li.post
       margin-bottom: 1em
       padding: 1em
+      border-radius: 15px
       border: 1px solid #ccc 
       .header
         .from

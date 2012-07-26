@@ -118,8 +118,10 @@ task :build do
 
   # build coffee
   puts "Building coffee script..."
-  Dir["src/coffee/*.coffee"].each {|f|
-    `./#{Cfg.xulsdkdir}/bin/js -f lib/javascript/coffee-script.js -e "print(CoffeeScript.compile(read('#{f}')));" > #{Cfg.builddir}/xul/content/javascript/#{File.basename(f,'.coffee')}.js`}
+  Dir["src/coffee/*.coffee"].each do |f|
+    puts f
+    `./#{Cfg.xulsdkdir}/bin/js -f lib/javascript/coffee-script.js -e "print(CoffeeScript.compile(read('#{f}')));" > #{Cfg.builddir}/xul/content/javascript/#{File.basename(f,'.coffee')}.js`
+  end
   
   # build sass
   Dir["src/sass/*.sass"].reject{|f| File.basename(f).match(/^[_.]/)}.each{|sass|
@@ -188,6 +190,7 @@ def distribute_mac
   `cp platform/mac/Info.plist #{basedir}`
   `cp platform/mac/life.icns #{basedir}/Resources`
   `chmod -R 755 #{basedir}/..`
+  `cd #{dmgdir} && tar -cjf life_mac.tar.bz2 Life.app`
 end
 
 def distribute_linux64
@@ -196,7 +199,7 @@ def distribute_linux64
   `cp -r build/xul/ #{appdir}/Life`
   `cp -R #{Cfg.cachedir}/linux64/xulrunner #{appdir}/Life/xulrunner`
   `cp #{appdir}/Life/xulrunner/xulrunner-stub #{appdir}/Life/Life`
-  `cd #{appdir} && tar -cjf Life.tar.bz2 Life`
+  `cd #{appdir} && tar -cjf life_linux64.tar.bz2 Life`
 end
 
 def distribute_windows
@@ -205,7 +208,7 @@ def distribute_windows
   `cp -r build/xul/ #{windir}/Life`
   `cp -R #{Cfg.cachedir}/win/xulrunner #{windir}/Life/xulrunner`
   `cp #{windir}/Life/xulrunner/xulrunner-stub.exe #{windir}/Life/Life.exe`
-  `cd #{windir} && zip -r Life.zip Life`
+  `cd #{windir} && zip -r life_win.zip Life`
 end
 
 def download_cache(file, url, dir, cmd="tar -xjf")
