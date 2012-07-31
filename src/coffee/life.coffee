@@ -8,6 +8,66 @@ app_store = new AppStorage()
 # crypto
 crypto = new Crypto()
 
+# needed functions to pass to constructors...
+remote2local = (obj)->
+  logger.debug("received: #{obj.toSource()}")
+  if obj.tag is "post"
+    profiles = [].concat(obj.to)
+    profiles.push(obj.from)
+    logger.debug("checking for profiles to create in #{profiles.toSource()}")
+    for p in profiles
+      if l = get_profile_by_email(p.email)
+        # TODO: SECURITY: flaw!!  Need to ask user... or somethign.
+        # update pubkeys
+        if p.pubkey isnt l.pubkey
+          l.pubkey = p.pubkey
+          store_profile(p)
+      else
+        logger.debug("creating profile from email=#{p.email} for post=#{obj.toSource()}")
+        store_profile(p)
+
+    # transform remote to/from to ids
+    obj.to = (get_profile_by_email(p.email).id for p in obj.to)
+    obj.from = get_profile_by_email(obj.from.email).id
+    obj
+  else
+    obj
+
+local2remote = (obj)->
+  if obj.tag is "post"
+    r = deep_copy(obj)
+    r.to = (remote_post_profile(get_profile(p)) for p in obj.to) # array of ids to array of remote profile objs
+    r.from = (remote_post_profile(get_profile(obj.from))) # id to remote profile obj
+    r
+  else
+    obj
+
+stringify= (obj)->
+  switch obj.tag
+    when "ake"
+      btoa(JSON.stringify(obj))
+    when "ake_response"
+      crypto.encrypt JSON.stringify(local2remote(obj)), [obj.to]
+    when "post"
+      crypto.encrypt JSON.stringify(local2remote(obj)), (get_profile(p).pubkey for p in obj.to)
+    else
+      crypto.encrypt JSON.stringify(local2remote(obj)), [me.pubkey]
+
+objify= (tag,str)->
+  switch tag
+    when "ake"
+      JSON.parse(atob(str))
+    else
+      remote2local(JSON.parse(crypto.decrypt(str)))
+
+tos= (obj)->
+  switch obj.tag
+    when "post"
+      (get_profile(pid).email for pid in obj.to)
+    else
+      [me.email]
+
+
 # hook up storage / event handlers
 ls =
   get: (id)->app_store.get_object(id)
@@ -29,23 +89,27 @@ storage.on_connect = ()->
   # sync to view model
   loadViewModel()
   viewModel.state.set_connected()
- 
-  # test data...
-  #storage.on_receive(id:Util.uuid(),tag:"post",content:"WHATUP",date:"",from:{email:"tool@you.com"},to:[email:me.email],date:new Date().getTime())
   
 # handle new objects from remote...
 storage.on_receive = (obj)->
   switch obj.tag
-    when "circle" then store_circle(obj)
-    when "profile" then store_profile(obj)
+    when "circle" then store_circle(obj,true)
+    when "profile" then store_profile(obj,true)
     when "post" then store_post(obj,true)
+    when "ake" then on_ake(obj)
+    when "ake_response" then on_ake_response(obj)
 
 # Setup ViewModel / event handlers
 viewModel=new ViewModel(
   update: (to,name,email,content)->
     if email
       to = store_profile(display:name, email:email)
-    store_post(id:Util.uuid(), from: me.id, to: [to.id], content: content, date:new Date().getTime())
+    post = id:Util.uuid(), from: me.id, to: [to.id], content: content, date:new Date().getTime()
+    if to.pubkey?
+      store_post(post)
+    else
+      store_queued(post)
+      send_ake(to)
     viewModel.updateReset()
   connect: (email,password,remember)->
     app_store.put('email', email)
@@ -64,21 +128,18 @@ viewModel.remember(p?)
 # key
 key = app_store.get('key')
 if key
-  crypto.key = JSON.parse(key)
+  logger.debug("setting private key: #{key}")
+  crypto.setkey key
 else
   viewModel.state.set_generating()
-  #crypto.generate((key)->
-  worker = new Worker('chrome://life/content/javascript/generate.js')
-  worker.onmessage = (event)->
-    crypto.key = event.data
-    logger.debug("strong private key...")
-    app_store.put('key',JSON.stringify(crypto.key))
+  crypto.generate ()->
+    logger.debug("storing private key: #{crypto.private_key()}")
+    app_store.put('key',crypto.private_key())
     viewModel.state.set_not_connected()
-  worker.postMessage(passphrase: Util.uuid()+Util.uuid()+(new Date().getTime()), bits: 1024)
 
 # Helpers
 profile2view = (model)->
-  new Profile(model.id,model.display,model.email)
+  new Profile(model.id,model.display,model.email,model.pubkey)
 
 circle2view = (model)->
   new Circle(model.id,model.name,profile2view(get_profile(p)) for p in model.profiles)
@@ -87,7 +148,7 @@ post2view = (model)->
   new Post(model.id,profile2view(get_profile(model.from)),(profile2view(get_profile(p)) for p in model.to),model.content,new Date(model.date))
 
 replace_in_observable_array = (array,obj)->
-  if existing = (vm for vm in array when vm.id is obj.id)[0]
+  if existing = (vm for vm in array() when vm.id is obj.id)[0]
     logger.debug("collection: replace #{existing.toSource()} with #{obj.toSource()}")
     array.splice(array.indexOf(existing),1,obj)
   else
@@ -114,6 +175,7 @@ get_profile= (id)->
 list_circles= -> storage.list("circle")
 list_profiles= -> storage.list("profile")
 list_posts= -> storage.list("post")
+list_queued= -> storage.list("queued")
 
 store=(obj,tag,local_only)->
    obj.id||=Util.uuid()
@@ -121,13 +183,14 @@ store=(obj,tag,local_only)->
    logger.debug("storing object: #{obj.toSource()}")
    storage.put(obj,local_only)
 
-store_circle= (obj)->
-  store(obj,"circle",true)
+store_circle= (obj,local_only)->
+  store(obj,"circle",local_only)
   replace_in_observable_array(viewModel.circles, circle2view(obj))
   obj
 
-store_profile= (obj)->
-  store(obj,"profile",true)
+store_profile= (obj,local_only)->
+  obj.display ||= obj.email
+  store(obj,"profile",local_only)
   replace_in_observable_array(viewModel.profiles,profile2view(obj))
   obj
 
@@ -136,44 +199,49 @@ store_post= (obj,local_only)->
   replace_in_observable_array(viewModel.posts, post2view(obj))
   obj
 
+store_queued= (obj)->
+  store(obj, "queued", true)
+  replace_in_observable_array(viewModel.posts, post2view(obj))
+
 remote_post_profile= (profile)->
-  email: profile.email
+  pubkey: profile.pubkey, email: profile.email
 
-stringy= (obj)->
-  crypto.encrypt(JSON.stringify(local2remote(obj)),(if obj.tag is "post" then (get_profile(p).pubkey for p in obj.to) else [me.pubkey]))
+send_ake= (to)->
+  storage.remote.send_impl {email:me.email, pubkey:me.pubkey, tag:"ake"},
+    [to.email],
+    subject:"You have a new private message!",txt:"Download the Life client to see the message: http://173.29.20.141:3366/"
 
-objify= (str)->
-  remote2local(JSON.parse(crypto.decrypt(str)))
+send_ake_response= (to)->
+  storage.remote.send_impl {tag:"ake_response", email: me.email, pubkey: me.pubkey, to: to.pubkey},
+    [to.email],
+    {}
 
-tos= (obj)->
-  if obj.tag is "post" then (p.email for p in obj.to) else [me.email])
+send_queued= (p)->
+  logger.debug("sending queued posts for: #{p.toSource()}")
+  store_post(stored) for stored in list_queued() when stored.to.indexOf(p.id) isnt -1
 
-remote2local = (obj)->
-  if obj.tag is "post"
-    profiles = [].concat(obj.to)
-    profiles.push(obj.from)
-    logger.debug("checking for profiles to create in #{profiles.toSource()}")
-    for p in profiles
-      if !get_profile_by_email(p.email)
-        logger.debug("creating profile from email=#{p.email} for post=#{obj.toSource()}")
-        newp = display:p.email, email:p.email
-        store_profile(newp)
-
-    # transform remote to/from to ids
-    obj.to = (get_profile_by_email(p.email).id for p in obj.to)
-    obj.from = get_profile_by_email(obj.from.email).id
-    obj
+# handle key exchange message
+on_ake= (obj)->
+  logger.debug("received ake: #{obj.toSource()}")
+  p=get_profile_by_email(obj.email)
+  if p?
+    # TODO: SECURITY: risk here of blindly updating pubkey!  probably need to prompt user...
+    p.pubkey = obj.pubkey
   else
-    obj
+    p = email: obj.email, pubkey: obj.pubkey, display: obj.display
+  store_profile(p)
+  send_ake_response(p)
 
-local2remote = (obj)->
-  if obj.tag is "post"
-    r = deep_copy(obj)
-    r.to = (remote_post_profile(get_profile(p)) for p in obj.to) # array of ids to array of remote profile objs
-    r.from = (remote_post_profile(get_profile(obj.from))) # id to remote profile obj
-    r
+# send any queued messages!
+on_ake_response= (obj)->
+  p=get_profile_by_email(obj.email)
+  if p?
+    p.pubkey = obj.pubkey
+    store_profile(p)
+    send_queued(p)
   else
-    obj
+    logger.error("DISCARDING ake response: not expecting ake response: #{obj.toSource()}")
+
 
 # don't like this here...
 # Setup KO bindings

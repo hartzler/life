@@ -5,11 +5,21 @@ logger.debug("loading crypto.js...")
 
 
 class Crypto
-  constructor: (@key)->
+  setkey: (keystring)->
+    @key = cryptico.privateKeyFromString(keystring)
+
+  private_key: ->
+    cryptico.privateKeyString(@key)
  
   # have to do in a worker for now...
-  #generate: ()->
-  #  cryptico.generateRSAKey(Util.uuid()+Util.uuid()+new Date().getTime() , 2048)
+  generate: (on_success)->
+    logger.debug("generating private key...")
+    worker = new Worker('chrome://life/content/javascript/generate.js')
+    worker.onmessage= (event)=>
+      logger.debug("generated: #{event.data}")
+      @setkey(event.data)
+      on_success(event.data)
+    worker.postMessage(passphrase:Util.uuid()+new Date().getTime() , bits:512)
 
   public_key: ->
     cryptico.publicKeyString(@key)
@@ -23,21 +33,30 @@ class Crypto
     keys = []
     for publickey in pubkeys
       try
+        logger.debug("encrypting aes key #{cryptico.b64to16(cryptico.b256to64(cryptico.bytes2string(aeskey)))} with publickey #{publickey}")
         pk = cryptico.publicKeyFromString(publickey)
         keys.push [cryptico.publicKeyID(publickey), cryptico.b16to64(pk.encrypt(cryptico.bytes2string(aeskey)))]
       catch err
         return {status: "Invalid public key"}
-    cipher = cryptico.encryptAESCBC(text, aeskey)
+    cipher = cryptico.encryptAESCBC(plaintext, aeskey)
     signature = cryptico.b16to64(@key.signString(JSON.stringify(keys) + cipher, "sha256"))
-    return {pubkey: @public_key(), cipher: cipher, keys: keys, signature: signature}
+    return btoa(JSON.stringify({cipher: cipher, keys: keys, signature: signature}))
 
   # takes an object from the result of @encrypt()
   decrypt: (encrypted)->
-    result = cryptico.encrypt(text,key)
-    if result.signature is "verified"
-      result.plaintext
+    o=JSON.parse(atob(encrypted))
+    id = @public_key_id()
+    logger.debug("decrypting: #{o.toSource()} with pubkey_id: #{id}")
+    # todo verify signature
+    keyblock = (key[1] for key in o.keys when key[0] is id)[0]
+    logger.debug("decrypting keyblock: #{keyblock}")
+    aeskeytext = @key.decrypt(cryptico.b64to16(keyblock))
+    if aeskeytext
+      logger.debug("decrypting using aes key: #{cryptico.b64to16(cryptico.b256to64(aeskeytext))}")
+      cryptico.decryptAESCBC(o.cipher, cryptico.string2bytes(aeskeytext))
     else
-      "invalid signature."
+      logger.error("unable to decrypt aes key!")
+      throw "Unable to decrypt aes key"
 
 # exports
 window.Crypto = Crypto

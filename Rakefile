@@ -37,7 +37,7 @@ Cfg.platform = platform()
 Cfg.rootdir = File.dirname(__FILE__)
 Cfg.builddir = 'build'
 Cfg.distdir = "#{Cfg.builddir}/dist"
-Cfg.xulversion = "14.0b6"
+Cfg.xulversion = "14.0.1"
 Cfg.cachedir = "cache/#{Cfg.xulversion}"
 Cfg.xulsdkdir = "#{Cfg.cachedir}/xulrunner-sdk"
 Cfg.xuluri = {
@@ -165,10 +165,10 @@ def package_mac
   xulframework = "Frameworks/XUL.framework"
   xulversions = "#{xulframework}/Versions"
   [xulversions,"Resources","MacOS"].each{|dir|`mkdir -p #{basedir}/#{dir}`}
-  `ln -s $PWD/#{Cfg.xulsdkdir}/bin #{basedir}/#{xulversions}/Current`
-  `cd #{basedir}/#{xulframework} && ln -s Versions/Current/XUL XUL`
-  `cd #{basedir}/#{xulframework} && ln -s Versions/Current/libxpcom.dylib libxpcom.dylib`
-  `cd #{basedir}/#{xulframework} && ln -s Versions/Current/xulrunner-bin xulrunner-bin`
+  `ln -s $PWD/#{Cfg.xulsdkdir}/bin #{basedir}/#{xulversions}/#{Cfg.xulversion}`
+  `cd #{basedir}/#{xulframework} && ln -s Versions/#{Cfg.xulversion}/XUL XUL`
+  `cd #{basedir}/#{xulframework} && ln -s Versions/#{Cfg.xulversion}/libxpcom.dylib libxpcom.dylib`
+  `cd #{basedir}/#{xulframework} && ln -s Versions/#{Cfg.xulversion}/xulrunner-bin xulrunner-bin`
   `cp -r #{Cfg.builddir}/xul/* #{basedir}/Resources`
   `cp #{Cfg.xulsdkdir}/bin/xulrunner #{basedir}/MacOS`
   `cp platform/mac/Info.plist #{basedir}`
@@ -185,7 +185,7 @@ def distribute_mac
   xulframework = "#{Cfg.cachedir}/mac/XUL.framework"
   ["Frameworks","Resources","MacOS"].each{|dir|`mkdir -p #{basedir}/#{dir}`}
   `cp -R #{xulframework} #{basedir}/Frameworks`
-  `cp #{xulframework}/Versions/Current/xulrunner #{basedir}/MacOS`
+  `cp #{xulframework}/Versions/#{Cfg.xulversion}/xulrunner #{basedir}/MacOS`
   `cp -r #{Cfg.builddir}/xul/* #{basedir}/Resources`
   `cp platform/mac/Info.plist #{basedir}`
   `cp platform/mac/life.icns #{basedir}/Resources`

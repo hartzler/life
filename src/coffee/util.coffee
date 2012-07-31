@@ -8,6 +8,11 @@ dump("*** util.js *** Loading...\n")
 
 Util = {}
 
+parserUtils = Components.classes["@mozilla.org/parserutils;1"].getService(Components.interfaces.nsIParserUtils)
+
+Util.sanitize= (str)->
+  parserUtils.sanitize(str, parserUtils.SanitizerAllowStyle | parserUtils.SanitizerDropForms)
+
 
 # generate a UUID
 # TODO: real impl

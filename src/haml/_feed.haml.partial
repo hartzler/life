@@ -42,5 +42,5 @@
           %span.date{"data-bind"=>"text: humaneDate"}
           %span.to{"data-bind"=>"foreach: to"}
             %span{"data-bind"=>"text: display"}
-        .content{"data-bind"=>"text: content"}
+        .content{"data-bind"=>"html: content"}
       

@@ -71,13 +71,13 @@ class TestStorage
 
 # a remote storage using IMAP/SMTP
 class EmailRemoteStorage
-  constructor: (@stringify, @objify, @tos)->
+  constructor: (@stringify,@objify,@tos)->
     @logger = new Util.Logger("Life::EmailStorage",'debug')
     @client = new LifeClient()
     @client.logger = new Util.Logger("Life::EmailStorage::Client",'debug')
  
   connect: (options)->
-    @client.notify = (obj)=>@on_receive(@objify(obj))
+    @client.notify = (tag,str)=>@on_receive(@objify(tag,str))
     @client.connect(options
       (()=>@on_connect()),
       ((msg)=>logger.error(msg)),
@@ -89,11 +89,14 @@ class EmailRemoteStorage
   on_disconnect: ()->
  
   send: (obj)->
-    @client.send @tos(obj),
-      "Private Message", # subject
+    @send_impl(obj,@tos(obj),{})
+
+  send_impl: (obj,tos,options)->
+    @client.send tos,
+      options.subject || "Private Message",
       undefined, # related
-      undefined, # html
-      undefined, # txt
+      options.html, # html
+      options.txt, # txt
       @stringify(obj),
       obj.tag,
       ()=>@logger.debug("store success..."), # success

@@ -12,9 +12,9 @@ ko.bindingHandlers.fadeVisible=
 
 ko.bindingHandlers.htmlValue =
   init: (element, valueAccessor, allBindingsAccessor)->
-    ko.utils.registerEventHandler element, "keydown", ()->
+    ko.utils.registerEventHandler element, "blur", ()->
       modelValue = valueAccessor()
-      elementValue = element.innerHTML
+      elementValue = Util.sanitize(element.innerHTML)
       if (ko.isWriteableObservable(modelValue))
         modelValue(elementValue)
       else # handle non-observable one-way binding
@@ -24,11 +24,11 @@ ko.bindingHandlers.htmlValue =
   update: (element, valueAccessor)->
     value = ko.utils.unwrapObservable(valueAccessor()) || ""
     if element.innerHTML isnt value
-      element.innerHTML = value
+      element.innerHTML = Util.sanitize(value)
 
 # View Model
 class Profile
-  constructor: (@id, @display, @email) ->
+  constructor: (@id, @display, @email, @pubkey) ->
 
 class Circle
   constructor: (@id, @name, @profiles)->
