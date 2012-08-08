@@ -13,7 +13,6 @@ parserUtils = Components.classes["@mozilla.org/parserutils;1"].getService(Compon
 Util.sanitize= (str)->
   parserUtils.sanitize(str, parserUtils.SanitizerAllowStyle | parserUtils.SanitizerDropForms)
 
-
 # generate a UUID
 # TODO: real impl
 Util.uuid = ()->
@@ -22,6 +21,25 @@ Util.uuid = ()->
     v = if c is 'x' then r else (r&0x3|0x8)
     v.toString(16)
   ).toUpperCase()
+
+# simple pubsub!
+class PubSub
+  constructor: ->
+
+  on: (e,f)->
+    @_subscribers ||= {}
+    @_subscribers[e] = [] unless @_subscribers[e]?
+    @_subscribers[e].push(f)
+  
+  pub: (e,params...)->
+    @_subscribers ||= {}
+    for f in (@_subscribers[e] || [])
+      try
+        f(params...)
+      catch ex
+        logger.error("PubSub: uncaught exception while firing event [#{e}] w/ data #{(params||{}).toSource()}",ex)
+
+Util.PubSub = PubSub
 
 # basic log4x like class
 class Logger

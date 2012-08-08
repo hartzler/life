@@ -1,5 +1,5 @@
-# Defines the storage local/remote for objs
-# Note: try to be app agnostic (aka no tags)
+# Defines the Storage, Local, Sync
+# Note: try to be app agnostic (aka no tags/types)
 #
 # minimum obj:
 # id, tag, ...
@@ -7,50 +7,39 @@
 logger = new Util.Logger('Life::Storage','debug')
 logger.debug("loading storage.js...")
 
-
 class Storage
-  constructor: (@local,@remote)->
+  constructor: (@local,@sync)->
     @logger = logger    # DI
-    # delegate
-    @get = (id)->@local.get(id)
-    @list = (tag)->@local.list(tag)
-    @remote.on_receive = (obj)=>@on_receive(obj)
-    @remote.on_connect = ()=>@on_connect()
+    @sync.on_receive = (obj)=>
+      @local.put(obj) # store local
+      @on_obj(obj)    # raise event
+
+  # delegate
+  get: (id)->@local.get(id)
+  list: (tag)->@local.list(tag)
 
   put: (obj,local_only)->
     @logger.debug("storing obj: #{obj.toSource()}")
     # first put local
     @local.put(obj)
-    # then remote
-    @remote.send(obj) unless local_only
+    # then sync
+    @sync.store(obj) unless local_only
 
-  # events
-  on_receieve: (obj)->
+  # events to override...
+  on_obj: (obj)->
 
-  connect: (options)->
-    @remote.connect(options)
 
 # interface
-class LocalStorage
+class Local
   get: (id)->
   put: (obj)->
   list: (tag)->
 
-# interface
-class RemoteStorage
-  connect: ()->
-  disconnect: ()->
-  put: (obj)->
-  send: (obj)->
-  on_receive: (obj)->
-  on_connect: ()->
-  on_disconnect: ()->
-
-# implements LocalStorage && RemoteStorage
-class TestStorage
-  constructor: ()->
+# non-persistent
+class TestLocal
+  constructor: (@logger)->
     @objects = {}
-    @logger = new Util.Logger("Life::TestStorage","debug")
+    @logger ||= new Util.Logger("Life::Storage::TestLocal","debug")
 
   # local
   get: (id)-> @objects[id]
@@ -61,48 +50,40 @@ class TestStorage
   list: (tag)->
     (obj for id,obj of @objects when obj.tag is tag)
 
-  # remote
-  send: (obj)->@logger.debug("sending obj: #{obj.toSource()}")
-  connect: (options)-> @on_connect()
-
-  on_connect: ()->
-  on_disconnect: ()->
+# interface
+class Sync
+  store: (obj)->
   on_receive: (obj)->
 
-# a remote storage using IMAP/SMTP
-class EmailRemoteStorage
-  constructor: (@stringify,@objify,@tos)->
-    @logger = new Util.Logger("Life::EmailStorage",'debug')
-    @client = new LifeClient()
-    @client.logger = new Util.Logger("Life::EmailStorage::Client",'debug')
- 
-  connect: (options)->
-    @client.notify = (tag,str)=>@on_receive(@objify(tag,str))
-    @client.connect(options
-      (()=>@on_connect()),
-      ((msg)=>logger.error(msg)),
-      (()=>if @client.isOnline() then @on_connect() else @on_disconnect()))
-
-  # events
+# dummy
+class TestSync
+  constructor: (@logger)->
+    @logger ||= new Util.Logger("Life::Storage::TestSync","debug")
+  store: (obj)->
+    @logger.debug("sending obj: #{obj.toSource()}")
+    @on_receive(obj) # simulate event...
   on_receive: (obj)->
-  on_connect: ()->
-  on_disconnect: ()->
- 
-  send: (obj)->
-    @send_impl(obj,@tos(obj),{})
 
-  send_impl: (obj,tos,options)->
-    @client.send tos,
-      options.subject || "Private Message",
-      undefined, # related
-      options.html, # html
-      options.txt, # txt
-      @stringify(obj),
-      obj.tag,
-      ()=>@logger.debug("store success..."), # success
-      (msg)=>@logger.debug(msg) # failure
+# a sync over EmailBus...
+class EmailSync
+  constructor: (@bus,@encode,@decode)->
+    @bus.on('receive', @receive)
+    @logger = new Util.Logger("Life::Storage::EmailSync",'debug')
+
+  store: (obj)->
+    try
+      @bus.send(tag:obj.tag,crypted:true,base64:@encode(obj),subject:"Sync Data")
+    catch e
+      @logger.error("error sending message via bus!  #{obj.toSource()}",e)
+    
+  receive: (base64,subject)=>
+    @on_receive(@decode(base64)) if subject is "Sync Data"
+
+  # events to override...
+  on_receive: (obj)->
 
 # exports
 window.Storage = Storage
-window.TestStorage = TestStorage
-window.EmailRemoteStorage = EmailRemoteStorage
+window.TestLocal = TestLocal
+window.TestSync = TestSync
+window.EmailSync = EmailSync

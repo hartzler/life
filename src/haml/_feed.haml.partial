@@ -1,7 +1,7 @@
 #feed.tab-pane.fade.in.active
   .generating{"data-bind"=>"visible: state.generating"}
     %h2 Generating keys...
-    %img{"src"=>"chrome://life/content/images/connecting.gif"}
+    %img{"src"=>"chrome://life/content/img/connecting.gif"}
   .connect{"data-bind"=>"visible: state.not_connected"}
     %form
       %label Gmail
@@ -15,7 +15,7 @@
         %button.btn.btn-success{"data-bind"=>"click: connect"} Connect!
   .connecting{"data-bind"=>"fadeVisible: state.connecting"}
     %h2 Connecting...
-    %img{"src"=>"chrome://life/content/images/connecting.gif"}
+    %img{"src"=>"chrome://life/content/img/connecting.gif"}
   .rest{"data-bind"=>"fadeVisible: state.connected"}
     .update
       %form
@@ -37,10 +37,26 @@
           %button.btn.btn-success{"data-bind"=>"click: update"} Share
     %ul{"data-bind"=>"foreach: feed"}
       %li.post
-        .header
+        .links{"data-bind"=>"foreach: links"}
+          .link
+            .image{"data-bind"=>"text: image"}
+            .title{"data-bind"=>"text: title"}
+            .summary{"data-bind"=>"text: summary"}
+            .link{"data-bind"=>"text: link"}
+        .meta
           %span.from{"data-bind"=>"text: from.display"}
           %span.date{"data-bind"=>"text: humaneDate"}
           %span.to{"data-bind"=>"foreach: to"}
             %span{"data-bind"=>"text: display"}
         .content{"data-bind"=>"html: content"}
+        .stats
+          .likes
+            %button.btn{"data-bind"=>"click: function(){$parent.like($data)}"}
+              %i.icon-thumbs-up
+              %span{"data-bind"=>"text: num_likes"}
+          .comments
+            %button.btn
+              %i.icon-comment
+              %span{"data-bind"=>"text: num_comments"}
+      
       

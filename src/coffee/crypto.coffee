@@ -40,11 +40,11 @@ class Crypto
         return {status: "Invalid public key"}
     cipher = cryptico.encryptAESCBC(plaintext, aeskey)
     signature = cryptico.b16to64(@key.signString(JSON.stringify(keys) + cipher, "sha256"))
-    return btoa(JSON.stringify({cipher: cipher, keys: keys, signature: signature}))
+    {cipher: cipher, keys: keys, signature: signature}
 
   # takes an object from the result of @encrypt()
   decrypt: (encrypted)->
-    o=JSON.parse(atob(encrypted))
+    o=encrypted
     id = @public_key_id()
     logger.debug("decrypting: #{o.toSource()} with pubkey_id: #{id}")
     # todo verify signature

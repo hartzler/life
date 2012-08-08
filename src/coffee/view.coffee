@@ -34,7 +34,9 @@ class Circle
   constructor: (@id, @name, @profiles)->
 
 class Post
-  constructor: (@id, @from, @to, @content, @date) ->
+  constructor: (@id, @from, @to, @content, @date, num_comments, num_likes, @links=[]) ->
+    @num_comments = ko.observable(num_comments)
+    @num_likes = ko.observable(num_likes)
     @humaneDate = humaneDate(@date) # not quite right :) but gives a bogus start to the idea
 
 class State
@@ -85,11 +87,14 @@ class ViewModel
 
   update: ->
     # create new post
-    @callbacks.update(@updateTo(),@updateName(),@updateEmail(),@updateContent())
+    @callbacks.post(@updateTo(),@updateName(),@updateEmail(),@updateContent())
 
   connect: ->
     @state.set_connecting()
     @callbacks.connect(@email(), @password(), @remember())
+
+  like: (post)->
+    @callbacks.like(post)
 
 # exports
 window.ViewModel = ViewModel

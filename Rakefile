@@ -69,7 +69,7 @@ task :build_emoticon_scss do
   lib_base =File.join(Dir.pwd,"lib")
   scss_base =File.join(Dir.pwd,"src","scss")
   scss = ""
-  Dir.glob(File.join(lib_base,"images","emoticon","**","*.*")){|file|
+  Dir.glob(File.join(lib_base,"img","emoticon","**","*.*")){|file|
     puts file
     ofile = file.clone
     filetype = ofile.split(".").last
@@ -106,10 +106,10 @@ task :build do
   end
   
   # mkdirs
-  ["javascript", "css", "images"].map{|d| File.join(Cfg.builddir,'xul','content',d)}.each {|d| `mkdir -p #{d}`}
+  ["javascript", "css", "img"].map{|d| File.join(Cfg.builddir,'xul','content',d)}.each {|d| `mkdir -p #{d}`}
 
   # copy libs
-  ['javascript','css', "fonts", "images"].each{|d| `cp -R lib/#{d}/* #{File.join(Cfg.builddir,'xul','content',d)}`}
+  ['javascript','css', "fonts", "img"].each{|d| `cp -R lib/#{d}/* #{File.join(Cfg.builddir,'xul','content',d)}`}
 
   # build haml
   puts "Building haml..."
