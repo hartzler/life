@@ -34,10 +34,21 @@ class Circle
   constructor: (@id, @name, @profiles)->
 
 class Post
-  constructor: (@id, @from, @to, @content, @date, num_comments, num_likes, @links=[]) ->
-    @num_comments = ko.observable(num_comments)
+  constructor: (@id, @from, @to, @content, @date, num_likes, comments=[], @links=[]) ->
     @num_likes = ko.observable(num_likes)
-    @humaneDate = humaneDate(@date) # not quite right :) but gives a bogus start to the idea
+    @humaneDate = ko.computed(=>humaneDate(@date))
+    @show_comments = ko.observable(false)
+    @commentContent = ko.observable("")
+    @comments = ko.observableArray(comments)
+    @num_comments = ko.computed(=>@comments().length)
+
+  toggle_comments: ->
+    @show_comments(!@show_comments())
+
+class Comment
+  constructor: (@id, @from, @content, @date)->
+    @humaneDate = ko.computed(=>humaneDate(@date))
+  
 
 class State
   constructor: (states)->
@@ -96,8 +107,13 @@ class ViewModel
   like: (post)->
     @callbacks.like(post)
 
+  submitComment: (post)->
+    @callbacks.comment(post,post.commentContent())
+    post.commentContent("")
+
 # exports
 window.ViewModel = ViewModel
 window.Profile = Profile
 window.Circle = Circle
 window.Post = Post
+window.Comment = Comment

@@ -19,11 +19,14 @@ class Storage
   list: (tag)->@local.list(tag)
 
   put: (obj,local_only)->
-    @logger.debug("storing obj: #{obj.toSource()}")
-    # first put local
-    @local.put(obj)
-    # then sync
-    @sync.store(obj) unless local_only
+    existing = @local.get(obj.id)
+    if existing isnt obj
+      @logger.debug("storing obj: #{obj.toSource()}")
+      # TODO: handle sync in an async way w/ retry!
+      # first put local
+      @local.put(obj)
+      # then sync
+      @sync.store(obj) unless local_only
 
   # events to override...
   on_obj: (obj)->

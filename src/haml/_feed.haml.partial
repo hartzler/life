@@ -54,9 +54,17 @@
             %button.btn{"data-bind"=>"click: function(){$parent.like($data)}"}
               %i.icon-thumbs-up
               %span{"data-bind"=>"text: num_likes"}
-          .comments
+          .comments{"data-bind"=>"click: toggle_comments"}
             %button.btn
               %i.icon-comment
               %span{"data-bind"=>"text: num_comments"}
-      
+        .comments{"data-bind"=>"visible: show_comments"}
+          .details{"data-bind"=>"foreach: comments"}
+            .comment
+              %span.from{"data-bind"=>"text: from.display"}
+              %span.date.pull-right{"data-bind"=>"text: humaneDate"}
+              .content{"data-bind"=>"text: content"}
+          .form
+            %textarea{"data-bind"=>"value: commentContent"}             
+            %button.btn{"data-bind"=>"click: function(){$parent.submitComment($data)}"} Submit
       

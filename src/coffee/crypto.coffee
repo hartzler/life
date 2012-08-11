@@ -30,30 +30,36 @@ class Crypto
   # returns {cipher: "...", keys: [], signature: "..."}
   encrypt: (plaintext, pubkeys)->
     aeskey = cryptico.generateAESKey()
-    keys = []
+    keys = {}
     for publickey in pubkeys
       try
         logger.debug("encrypting aes key #{cryptico.b64to16(cryptico.b256to64(cryptico.bytes2string(aeskey)))} with publickey #{publickey}")
         pk = cryptico.publicKeyFromString(publickey)
-        keys.push [cryptico.publicKeyID(publickey), cryptico.b16to64(pk.encrypt(cryptico.bytes2string(aeskey)))]
+        keys[cryptico.publicKeyID(publickey)]=cryptico.b16to64(pk.encrypt(cryptico.bytes2string(aeskey)))
       catch err
         return {status: "Invalid public key"}
     cipher = cryptico.encryptAESCBC(plaintext, aeskey)
     signature = cryptico.b16to64(@key.signString(JSON.stringify(keys) + cipher, "sha256"))
-    {cipher: cipher, keys: keys, signature: signature}
+    JSON.stringify({keys: keys, signature: signature, length: cipher.length}) + "\n" + cipher
 
   # takes an object from the result of @encrypt()
-  decrypt: (encrypted)->
-    o=encrypted
+  decrypt: (packet)->
+    header_length = packet.indexOf("\n")
+    header = JSON.parse(packet.slice(0,header_length))
+    cipher = packet.slice(header_length+1)
     id = @public_key_id()
-    logger.debug("decrypting: #{o.toSource()} with pubkey_id: #{id}")
+    logger.debug("decrypting: header=#{header.toSource()} with pubkey_id=#{id}")
     # todo verify signature
-    keyblock = (key[1] for key in o.keys when key[0] is id)[0]
-    logger.debug("decrypting keyblock: #{keyblock}")
-    aeskeytext = @key.decrypt(cryptico.b64to16(keyblock))
+    keyblock = header.keys[id]
+    if keyblock
+      logger.debug("decrypting keyblock: #{keyblock}")
+      aeskeytext = @key.decrypt(cryptico.b64to16(keyblock))
+    else
+      logger.error("unable to find session key for public key id: #{id}")
+      throw "Unable to find keyblock!"
     if aeskeytext
       logger.debug("decrypting using aes key: #{cryptico.b64to16(cryptico.b256to64(aeskeytext))}")
-      cryptico.decryptAESCBC(o.cipher, cryptico.string2bytes(aeskeytext))
+      cryptico.decryptAESCBC(cipher, cryptico.string2bytes(aeskeytext))
     else
       logger.error("unable to decrypt aes key!")
       throw "Unable to decrypt aes key"

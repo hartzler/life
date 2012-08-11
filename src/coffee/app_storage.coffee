@@ -128,8 +128,8 @@ class AppStorage
     @st_insert_object.params.object_id = obj.id
     @st_insert_object.params.tag = obj.tag
     @st_insert_object.params.date = obj.date || new Date().getTime()
-    @st_insert_object.params.from_id = obj.from
-    @st_insert_object.params.parent_id = obj.parent_id || ""
+    @st_insert_object.params.from_id = obj.from || null
+    @st_insert_object.params.parent_id = obj.parent_id || null
     @st_insert_object.params.serialized = @stringify(obj)
     @logger.debug("inserting object: " + obj.toSource())
     while @st_insert_object.step()

@@ -12,8 +12,8 @@ crypto = new Crypto()
 me = {}
 
 # our encrypted serialization functions...
-decode=(base64)->JSON.parse(crypto.decrypt(JSON.parse(atob(base64))))
-encode=(obj,pubkeys)->btoa(JSON.stringify(crypto.encrypt(JSON.stringify(obj),pubkeys||[me.pubkey])))
+decode=(base64)->JSON.parse(crypto.decrypt(atob(base64)))
+encode=(obj,pubkeys)->btoa(crypto.encrypt(JSON.stringify(obj),pubkeys||[me.pubkey]))
 
 # hook up storage / event handlers
 #email_client = new LifeClient()
@@ -97,9 +97,11 @@ viewModel.remember(p?)
 key = app_store.get('key')
 if key
   crypto.setkey key
+  logger.debug("using key: public=#{crypto.public_key()}")
 else
   viewModel.state.set_generating()
   crypto.generate ()->
+    logger.debug("generated key: public=#{crypto.public_key()}")
     app_store.put('key',crypto.private_key())
     viewModel.state.set_not_connected()
 
@@ -111,14 +113,17 @@ circle2view = (model)->
   new Circle(model.id,model.name,profile2view(get_profile(p)) for p in model.profiles)
 
 post2view = (model)->
-  num_comments = storage.list(tag:"comment",parent_id:model.id).length
+  comments = storage.list(tag:"comment",parent_id:model.id)
   num_likes = storage.list(tag:"like",parent_id:model.id).length
   new Post model.id,
     profile2view(get_profile(model.from)),
     (profile2view(get_profile(p)) for p in model.to),
     model.content,new Date(model.date),
-    num_comments,
-    num_likes
+    num_likes,
+    (comment2view(c) for c in comments)
+
+comment2view= (c)->
+    new Comment(c.id,profile2view(get_profile(c.from)),c.content,new Date(c.date))
 
 replace_in_observable_array = (array,obj)->
   if existing = (vm for vm in array() when vm.id is obj.id)[0]
@@ -177,14 +182,13 @@ store_queued= (obj)->
 
 store_like= (obj)->
   store(obj, "like")
-  #view = (p for p in viewModel.posts() when p.id is obj.parent_id)[0]
-  #view.num_likes() if(p)
   replace_in_observable_array(viewModel.posts, post2view(get_profile(obj.parent_id)))
   obj
 
 store_comment= (obj)->
+  obj.date ||= new Date().getTime()
   store(obj, "comment")
-  replace_in_observable_array(viewModel.posts, post2view(get_profile(obj.parent_id)))
+  replace_in_observable_array((p for p in viewModel.posts() when p.id is obj.parent_id)[0].comments, comment2view(obj))
   obj
 
 remote_post_profile= (profile)->
@@ -236,7 +240,7 @@ outgoing=
       subject:"Friend Request"
       crypted: false
       tag: "ake"
-      base64:atob(JSON.stringify(email:me.email, pubkey:me.pubkey, tag:"ake"))
+      base64:btoa(JSON.stringify(email:me.email, pubkey:me.pubkey, tag:"ake"))
       txt:"Download the Life client to see the message: http://173.29.20.141:3366/"
     )
 
@@ -297,9 +301,12 @@ bus.on 'receive', (base64,subject)->
     when 'Private Message'
       obj = decode(base64)
       logger.debug("received private message on bus: #{obj.toSource()}")
-      incoming[obj.tag](obj)
+      if incoming[obj.tag]
+        incoming[obj.tag](obj)
+      else
+        logger.warn("unknown object of type: #{obj.tag}")
     when 'Friend Request'
-      incoming.ake(JSON.parse(btoa(base64)))
+      incoming.ake(JSON.parse(atob(base64)))
 
 window.onerror = (event)->
   logger.error("Unhandled error in window! #{event.toSource()}")
