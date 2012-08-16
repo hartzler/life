@@ -80,6 +80,7 @@ class AppStorage
 
 
   get_object: (id)->
+    @logger.debug("get_object: id=#{id}")
     @st_get_object.params.object = id
     obj = undefined
     while(@st_get_object.step())

@@ -1,11 +1,38 @@
 #friends.tab-pane.fade
-  %ul{"data-bind"=>"foreach: circles"}
-    %ul
-      %ul
-        %span.name{"data-bind"=>"text: name"} 
-        (
-        %span.size{"data-bind"=>"text: profiles.length"} 
-        )
-        %ul{"data-bind"=>"foreach: profiles"}
-          %li
-            .profile{"data-bind"=>"text: display"}
+  .psnuri.info-panel
+    %h2 Life ID
+    %p.instructions
+      Share this string with your friends so they can share with you via Life.
+    %p.uri{"data-bind"=>"text: meuri"}
+    %button.btn{"data-bind"=>"click: copyuri"} Copy to clipboard
+
+  .invite.info-panel
+    %h2 Invite Friend
+    %p.instructions
+      Enter an email address to send a specially formatted email that will help you and your friend easily share messages with each other.
+    %form
+      %label Email
+      %input.xlarge{"data-bind"=>"value: invite_email"}
+      %button.btn.btn-primary{"data-bind"=>"click: invite"} Invite
+
+  .add.info-panel
+    %h2 Add Friend
+    %p.instructions
+      You can add a friend by pasting in their Life ID which is a string that begins with psn2012://
+    %form
+      %label Life ID
+      %input.xlarge{"data-bind"=>"value: psnuri"}
+      %button.btn.btn-primary{"data-bind"=>"click: add_friend"} Add
+
+  .manage.info-panel
+    %h2 Friends
+    %p.instructions
+      These are your friends.
+    %ul.profiles{"data-bind"=>"foreach: profiles"}
+      %li.profile 
+        Alias
+        .alias{"data-bind"=>"text: display"}
+        Email
+        .email{"data-bind"=>"text: email"}
+        Pubkey
+        .pubkey{"data-bind"=>"text: pubkey"}

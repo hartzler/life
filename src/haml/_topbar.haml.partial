@@ -1,11 +1,13 @@
-.navbar{"data-bind"=>"visible: false"}
+.navbar.navbar-fixed-top{"data-bind"=>"visible: true"}
   .navbar-inner
     .container-fluid
       %ul.nav
         %li.feed.active
-          %a{:href=>"#feed"}Feed
+          %a.brand{:href=>"#feed"}Life
         %li.update
-          %a{:href=>"#update"}Update
+          %a{:href=>"#update"}Share
         %li.friends
           %a{:href=>"#friends"}Friends
+      .navbar-text.pull-right
+        %a.notifications.badge{"data-bind"=>"text: notifications().length, css: {'badge-important': notifications().length > 0}"}
 

@@ -34,13 +34,14 @@ class Circle
   constructor: (@id, @name, @profiles)->
 
 class Post
-  constructor: (@id, @from, @to, @content, @date, num_likes, comments=[], @links=[]) ->
-    @num_likes = ko.observable(num_likes)
+  constructor: (@id, @from, @to, @content, @date, likes=[], comments=[], @links=[]) ->
     @humaneDate = ko.computed(=>humaneDate(@date))
     @show_comments = ko.observable(false)
     @commentContent = ko.observable("")
     @comments = ko.observableArray(comments)
     @num_comments = ko.computed(=>@comments().length)
+    @likes = ko.observableArray(likes)
+    @num_likes= ko.computed(=>@likes().length)
 
   toggle_comments: ->
     @show_comments(!@show_comments())
@@ -48,7 +49,10 @@ class Post
 class Comment
   constructor: (@id, @from, @content, @date)->
     @humaneDate = ko.computed(=>humaneDate(@date))
-  
+
+class Like
+  constructor: (@id, @from, @date)->
+    @humaneDate = ko.computed(=>humaneDate(@date))
 
 class State
   constructor: (states)->
@@ -60,56 +64,104 @@ class State
 
 # whats visible :)
 class ViewModel
-  constructor: (@callbacks={}) ->
+  constructor: ->
 
-    # visible
+    @msgs = ko.observableArray([])
+
     @posts = ko.observableArray([])
     @feed = ko.computed ()=>@posts.sort((a,b)->a.date<b.date).slice(0,20)
-      
     @circles = ko.observableArray([])
     @profiles = ko.observableArray([])
+    @notifications = ko.observableArray([])
+
+    # friends
+    @meuri = ko.observable("")
+    @invite_email = ko.observable("")
+    @psnuri = ko.observable("")
 
     # state
-    @state = new State(["not_connected","generating","connecting","connected"])
+    @state = new State(["not_connected","generate","generating","connecting","connected"])
     @share_state = new State(["mini","max"])
     @to_state = new State(["select","add"])
 
-    # update
-    @updateTo = ko.observable()
+    # post
     @updateContent = ko.observable()
-    @updateName = ko.observable()
-    @updateEmail = ko.observable()
+    @updateTo = ko.observable()
+    @updateEmailOrUri = ko.observable()
+    @updateTos = ko.observableArray([])
 
     # setup
+    @passphrase = ko.observable("")
     @email = ko.observable("")
     @password = ko.observable("")
     @remember = ko.observable(false)
 
+  msg: (m)->
+    m.title ||= ""
+    @msgs.push(m)
+
+  invite: ->
+    @callbacks.invite(@invite_email())
+    @msg type:"success", title:"Invited!", msg: "You have successfully sent an invite.  You will soon be the most popular Lifer ever."
+
+  copyuri: ->
+    Util.copy_to_clipboard(@meuri())
+    @msg type:"info", title:"Copied Life ID!", msg: "Your clipboard is now full of Life!"
+    
   updateToggleTo: ->
     @updateTo(true)
 
   updateReset: ->
     # reset form, can i just form reset?
     @updateTo(null)
+    @updateTos([])
     @updateContent("")
-    @updateName(null)
-    @updateEmail(null)
+    @updateEmailOrUri("")
     @share_state.set_mini()
+
+  updateAddTo: ->
+    to=@updateTo()
+    if to?
+      @updateTos.remove to
+      @updateTos.push to
+      @updateTo(null)
+
+  updateRemoveTo: (profile)->
+    @updateTos.remove(profile)
 
   update: ->
     # create new post
-    @callbacks.post(@updateTo(),@updateName(),@updateEmail(),@updateContent())
+    @updateAddTo()
+    if @updateTos().length <= 0
+      @msg type:"error", title:"Error!", msg:"You need to specify a recipient."
+    else if @updateContent().length <= 0
+      @msg type:"error", title:"Error!", msg:"You need to share something..."
+    else
+      @callbacks.post(@updateTos(),@updateContent())
+      @msg type:"success", title:"Posted!", msg: "You have successfully shared a post.  Well done!"
+
+  close: (msg)->
+    @msgs.remove(msg)
 
   connect: ->
-    @state.set_connecting()
     @callbacks.connect(@email(), @password(), @remember())
+
+  generate: ->
+    @callbacks.generate(@passphrase())
 
   like: (post)->
     @callbacks.like(post)
+    @msgs.push type:"success", title:"Liked!", msg: "Everyone likes a liker..."
 
   submitComment: (post)->
     @callbacks.comment(post,post.commentContent())
     post.commentContent("")
+    @msgs.push type:"success", title:"Comment Posted!", msg: "You have an opinion on everything don't you..."
+
+  add_friend: ->
+    @callbacks.add_friend(@psnuri())
+    @psnuri("")
+    @msgs.push type:"success", title:"Friend Added!", msg: "Wow, you sure are popular."
 
 # exports
 window.ViewModel = ViewModel
@@ -117,3 +169,4 @@ window.Profile = Profile
 window.Circle = Circle
 window.Post = Post
 window.Comment = Comment
+window.Like = Like

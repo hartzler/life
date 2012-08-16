@@ -1,13 +1,28 @@
-#feed
-  .connect, .connecting, .update, .generating
-    margin: 10px
-    padding: 1em
-    background-color: #eee
-    border-radius: 15px
+body
+  margin-top: 40px
+
+.info-panel
+  margin: 10px
+  padding: 1em
+  background-color: #eee
+  border-radius: 15px
+  border: 1px solid #ddd
+  min-height: 200px
+
+.messages
+  padding-left: 1em
+  padding-right: 1em
+  padding-top: 1em
+
+#settings
+  .passphrase
+    textarea
+      width: 100% 
 
   .connecting, .generating
     text-align: center
 
+#update
   .update 
     .to_toggle
       text-align: right
@@ -25,6 +40,7 @@
         margin-right: 1em
         margin-left: 1em
 
+#feed
   ul
     list-style-type: none
     margin: 5px
@@ -46,6 +62,10 @@
       .to
         margin-left: 1em
         color: #ccc
+
+    .content
+      min-height: 100px
+
     .stats
       text-align: right
       .likes
@@ -65,3 +85,14 @@
         .date
           color: #ccc
         .content
+          min-height: 1em
+
+#friends
+  .uri
+    border: 1px solid #ccc
+    padding: 1em 
+    word-wrap: break-word
+
+  .pubkey
+    word-wrap: break-word
+

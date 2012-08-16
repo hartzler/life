@@ -1,0 +1,26 @@
+#settings
+  .generate.info-panel{"data-bind"=>"visible: state.generate"}
+    %h2 Passphrase
+    %p.instructions
+      Enter a passphrase (several words long) to protect your privacy.  You will need to remember this passphrase if you want to use Life on another device (or lose this device).  It should be
+      hard to guess for anyone but you.
+    .passphrase
+      %textarea{"data-bind"=>"value: passphrase"}
+      %button.btn.btn-primary{"data-bind"=>"click: generate"} Generate
+  .generating.info-panel{"data-bind"=>"visible: state.generating"}
+    %h2 Generating keys...
+    %img{"src"=>"chrome://life/content/img/connecting.gif"}
+  .connect.info-panel{"data-bind"=>"visible: state.not_connected"}
+    %form
+      %label Gmail
+      %input{:type=>"text","data-bind"=>"value: email"}
+      %label Password
+      %input{:type=>"password","data-bind"=>"value: password"}
+      %label 
+        %input{:type=>"checkbox","data-bind"=>"checked: remember"} 
+        Remember Password
+      .submit
+        %button.btn.btn-success{"data-bind"=>"click: connect"} Connect!
+  .connecting.info-panel{"data-bind"=>"fadeVisible: state.connecting"}
+    %h2 Connecting...
+    %img{"src"=>"chrome://life/content/img/connecting.gif"}

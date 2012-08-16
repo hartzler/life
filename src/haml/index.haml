@@ -6,10 +6,19 @@
     %link{:href => "css/life.css", :rel => "stylesheet", :type => "text/css"}
 
   %body
-    .page.vsplit
-       
-      = partial :topbar
+
+    .messages{"data-bind"=>"foreach: msgs, visible: msgs().length > 0"}
+      .alert{"data-bind"=>"css: {'alert-error': type == 'error', 'alert-success': type == 'success', 'alert-info': type == 'info' }"}
+        %a.close{:href=>'#',"data-bind"=>"click: function(){$parent.close($data)}"}x
+        %h4.alert-heading{"data-bind"=>"text: title"} 
+        .alert-block{"data-bind"=>"text: msg"} 
   
+    .settings{"data-bind"=>"visible: function(){!state.connected()}"}
+      = partial :settings
+
+    .page{"data-bind"=>"visible: state.connected"}
+      = partial :topbar
+
       #panels.expand.tab-content
         = partial :feed
         = partial :update
@@ -44,5 +53,6 @@
   %script{:type=>"application/x-javascript", :src => "javascript/view.js"}
 
   / controller
+  %script{:type=>"application/x-javascript", :src => "javascript/controller.js"}
   %script{:type=>"application/x-javascript", :src => "javascript/life.js"}
 

@@ -74,13 +74,16 @@ class EmailSync
     @logger = new Util.Logger("Life::Storage::EmailSync",'debug')
 
   store: (obj)->
-    try
-      @bus.send(tag:obj.tag,crypted:true,base64:@encode(obj),subject:"Sync Data")
-    catch e
-      @logger.error("error sending message via bus!  #{obj.toSource()}",e)
+    @logger.debug("storing: obj=#{obj.toSource()}")
+    @encode obj, (base64)=>
+      try
+        @bus.send(tag:obj.tag,crypted:true,base64:base64,subject:"Sync Data")
+      catch e
+        @logger.error("error sending message via bus!  #{obj.toSource()}",e)
     
   receive: (base64,subject)=>
-    @on_receive(@decode(base64)) if subject is "Sync Data"
+    if subject is "Sync Data"
+      @decode base64, (obj)=>@on_receive(obj)
 
   # events to override...
   on_receive: (obj)->

@@ -111,6 +111,9 @@ task :build do
   # copy libs
   ['javascript','css', "fonts", "img"].each{|d| `cp -R lib/#{d}/* #{File.join(Cfg.builddir,'xul','content',d)}`}
 
+  # copy js
+  `cp -R src/javascript/* #{File.join(Cfg.builddir,'xul','content','javascript')}`
+
   # build haml
   puts "Building haml..."
   Dir["src/haml/*.haml"].reject{|f| File.basename(f).match(/^[_.]/)}.each{|haml|

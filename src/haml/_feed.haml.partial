@@ -1,70 +1,38 @@
 #feed.tab-pane.fade.in.active
-  .generating{"data-bind"=>"visible: state.generating"}
-    %h2 Generating keys...
-    %img{"src"=>"chrome://life/content/img/connecting.gif"}
-  .connect{"data-bind"=>"visible: state.not_connected"}
-    %form
-      %label Gmail
-      %input{:type=>"text","data-bind"=>"value: email"}
-      %label Password
-      %input{:type=>"password","data-bind"=>"value: password"}
-      %label 
-        %input{:type=>"checkbox","data-bind"=>"checked: remember"} 
-        Remember Password
-      .submit
-        %button.btn.btn-success{"data-bind"=>"click: connect"} Connect!
-  .connecting{"data-bind"=>"fadeVisible: state.connecting"}
-    %h2 Connecting...
-    %img{"src"=>"chrome://life/content/img/connecting.gif"}
-  .rest{"data-bind"=>"fadeVisible: state.connected"}
-    .update
-      %form
-        .share-mini{"data-bind"=>"visible: share_state.mini"}
-          %input{"placeholder"=>"Share what's new...","data-bind"=>"click: function(){share_state.set_max(); $('#feed .share .content').focus()}"}
-        .share-max{"data-bind"=>"visible: share_state.max"}
-          .share
-            .content{"contenteditable"=>"true","data-bind"=>"htmlValue: updateContent", "placeholder"=>"Share what's new..."}
-          .controls{"data-bind"=>"visible: to_state.select"}
-            %label To
-            %select{"data-bind"=>"options: profiles, optionsText: 'display', value: updateTo, optionsCaption: 'Choose...'"}
-            %button.btn.btn-info{"data-bind"=>"click: to_state.set_add"} +
-          .controls{"data-bind"=>"visible: to_state.add"}
-            %label Name
-            %input{"data-bind"=>"value: updateName"}
-            %button.btn.btn-info{"data-bind"=>"click: to_state.set_select"} -
-            %label Email
-            %input{"data-bind"=>"value: updateEmail"}
-          %button.btn.btn-success{"data-bind"=>"click: update"} Share
-    %ul{"data-bind"=>"foreach: feed"}
-      %li.post
-        .links{"data-bind"=>"foreach: links"}
-          .link
-            .image{"data-bind"=>"text: image"}
-            .title{"data-bind"=>"text: title"}
-            .summary{"data-bind"=>"text: summary"}
-            .link{"data-bind"=>"text: link"}
-        .meta
-          %span.from{"data-bind"=>"text: from.display"}
-          %span.date{"data-bind"=>"text: humaneDate"}
-          %span.to{"data-bind"=>"foreach: to"}
-            %span{"data-bind"=>"text: display"}
-        .content{"data-bind"=>"html: content"}
-        .stats
-          .likes
-            %button.btn{"data-bind"=>"click: function(){$parent.like($data)}"}
-              %i.icon-thumbs-up
-              %span{"data-bind"=>"text: num_likes"}
-          .comments{"data-bind"=>"click: toggle_comments"}
-            %button.btn
-              %i.icon-comment
-              %span{"data-bind"=>"text: num_comments"}
-        .comments{"data-bind"=>"visible: show_comments"}
-          .details{"data-bind"=>"foreach: comments"}
-            .comment
-              %span.from{"data-bind"=>"text: from.display"}
-              %span.date.pull-right{"data-bind"=>"text: humaneDate"}
-              .content{"data-bind"=>"text: content"}
-          .form
-            %textarea{"data-bind"=>"value: commentContent"}             
-            %button.btn{"data-bind"=>"click: function(){$parent.submitComment($data)}"} Submit
-      
+  .nodata.info-panel{"data-bind"=>"visible: feed().length <= 0"} 
+    %h2 No Messages
+    %p.instructions
+      You have no messages yet.  Share something or invite some friends!
+  %ul{"data-bind"=>"foreach: feed"}
+    %li.post
+      .links{"data-bind"=>"foreach: links"}
+        .link
+          .image{"data-bind"=>"text: image"}
+          .title{"data-bind"=>"text: title"}
+          .summary{"data-bind"=>"text: summary"}
+          .link{"data-bind"=>"text: link"}
+      .meta
+        %span.from{"data-bind"=>"text: from.display"}
+        %span.date{"data-bind"=>"text: humaneDate"}
+        %span.to{"data-bind"=>"foreach: to"}
+          %span{"data-bind"=>"text: display"}
+      .content{"data-bind"=>"html: content"}
+      .stats
+        .likes
+          %button.btn{"data-bind"=>"click: function(){$parent.like($data)}"}
+            %i.icon-thumbs-up
+            %span{"data-bind"=>"text: num_likes"}
+        .comments{"data-bind"=>"click: toggle_comments"}
+          %button.btn
+            %i.icon-comment
+            %span{"data-bind"=>"text: num_comments"}
+      .comments{"data-bind"=>"visible: show_comments"}
+        .details{"data-bind"=>"foreach: comments"}
+          .comment
+            %span.from{"data-bind"=>"text: from.display"}
+            %span.date.pull-right{"data-bind"=>"text: humaneDate"}
+            .content{"data-bind"=>"text: content"}
+        .form.well
+          %textarea{"data-bind"=>"value: commentContent"}             
+          %button.btn{"data-bind"=>"click: function(){$parent.submitComment($data)}"} Submit
+    

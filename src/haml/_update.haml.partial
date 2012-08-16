@@ -1,10 +1,17 @@
 #update.tab-pane.fade
-  .form.well
-    .controls
-      %label To
-      %select{"data-bind"=>"options: profiles, optionsText: 'display', value: updateTo, optionsCaption: 'Choose...'"}
-    .controls
-      %label Status Update
-      %textarea.input-xlarge{"data-bind"=>"value: updateContent"}
-    %button{:type=>"submit", "data-bind"=>"click: update"} Submit
-      
+  .update.info-panel
+    .share{"data-bind"=>"click: function(){$('#update .content').focus()}"}
+      .content{"contenteditable"=>"true","data-bind"=>"htmlValue: updateContent", "placeholder"=>"Share what's new..."}
+
+    %p.picker
+      %form.form-inline
+        %label To
+        %select{"data-bind"=>"options: profiles, optionsText: 'display', value: updateTo, optionsCaption: 'Choose...'"}
+        %button.btn.btn-info{"data-bind"=>"click: updateAddTo"} + 
+
+    .tos{"data-bind"=>"foreach: updateTos"}
+      .to.alert.alert-success
+        %a.close.pull-right{:href=>"#","data-bind"=>"click: function(){$parent.updateRemoveTo($data)}"}x
+        .display{"data-bind"=>"text: display"}
+    %button.btn.btn-success{"data-bind"=>"click: update"} Share
+    %button.btn{"data-bind"=>"click: updateReset"} Cancel

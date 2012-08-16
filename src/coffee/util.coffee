@@ -8,8 +8,10 @@ dump("*** util.js *** Loading...\n")
 
 Util = {}
 
-parserUtils = Components.classes["@mozilla.org/parserutils;1"].getService(Components.interfaces.nsIParserUtils)
+clipboard=Components.classes["@mozilla.org/widget/clipboardhelper;1"].getService(Components.interfaces.nsIClipboardHelper)
+Util.copy_to_clipboard=(str)->clipboard.copyString(str)
 
+parserUtils = Components.classes["@mozilla.org/parserutils;1"].getService(Components.interfaces.nsIParserUtils)
 Util.sanitize= (str)->
   parserUtils.sanitize(str, parserUtils.SanitizerAllowStyle | parserUtils.SanitizerDropForms)
 
