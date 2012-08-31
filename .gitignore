@@ -6,6 +6,6 @@ src/.sass-cache
 .rvmrc
 build
 .sass-cache
-cache
+.cache
 xulrunner-sdk*
 dist.sh
