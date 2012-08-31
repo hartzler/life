@@ -1,6 +1,6 @@
 importScripts('cryptico.js')
 
-log=(s)->#dump("BACKGROUND: "); dump(s); dump("\n")
+log=(s)->dump("BACKGROUND: "); dump(s); dump("\n")
 
 # respond to calls of format worker.postMessage([function, callback, params...])
 self.onmessage = (event)->
@@ -36,10 +36,10 @@ encrypt= (key, plaintext, pubkeys)->
       pk = cryptico.publicKeyFromString(publickey)
       keys[cryptico.publicKeyID(publickey)]=cryptico.b16to64(pk.encrypt(cryptico.bytes2string(aeskey)))
     catch err
-      return {status: "Invalid public key"}
+      return {success: false, status: "Invalid public key"}
   cipher = cryptico.encryptAESCBC(plaintext, aeskey)
   signature = cryptico.b16to64(key.signString(JSON.stringify(keys) + cipher, "sha256"))
-  JSON.stringify({keys: keys, signature: signature, length: cipher.length}) + "\n" + cipher
+  success: true, packet: JSON.stringify({keys: keys, signature: signature, length: cipher.length}) + "\n" + cipher
 
 decrypt= (key, id, packet)->
   header_length = packet.indexOf("\n")

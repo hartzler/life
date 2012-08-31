@@ -7,18 +7,13 @@ crypto = new Crypto()
 me = {}
 
 # our async encrypted serialization functions...
-decode=(base64,continuation)->
-  #logger.debug("decode: base64=#{base64}")
-  crypto.decrypt atob(base64), (plaintext)->
-    #logger.debug("decode continuation: plaintext=#{plaintext}")
-    continuation(JSON.parse(plaintext))
-
+decode=(base64,continuation)->crypto.decrypt atob(base64), (plaintext)->continuation(JSON.parse(plaintext))
 encode=(obj,pubkeys,continuation)->
-  pubkeys||=[me.pubkey]
-  #logger.debug("encode: obj=#{obj.toSource()} pubkeys=#{pubkeys.toSource()}")
-  crypto.encrypt JSON.stringify(obj), pubkeys, (packet)->
-    #logger.debug("encode continuation: packet=#{packet}")
-    continuation(btoa(packet))
+  crypto.encrypt JSON.stringify(obj), pubkeys, (result)->
+    if result.success
+      continuation(btoa(result.packet))
+    else
+      throw "Error encrypting obj! pubkeys=#{pubkeys.toSource()} result=#{result.toSource()}"
 
 # hook up storage / event handlers
 email_client = new LifeClient()
@@ -182,13 +177,15 @@ send= (obj, tos)->
   local2remote(obj)
   logger.debug("send: obj=#{obj.toSource()} tos=#{tos.toSource()}")
   encode obj,(p.pubkey for p in tos),(base64)->
+    logger.debug("sending via bus: #{base64}")
     try
       bus.send(
         to:(p.email for p in tos)
         subject: "Private Message"
         tag:obj.tag
         crypted: true
-        base64: base64
+        base64: base64,
+        ((msg)->logger.debug("error sending message via bus: #{msg}"))
       )
     catch e
       logger.error("error sending out message on bus!  #{obj.toSource()}",e)
@@ -204,13 +201,13 @@ outgoing=
   like: (like)->
     logger.debug("sending like: #{like.toSource()}")
     post=get_post(like.parent_id)
-    tos = (get_profile(pid) for pid in post.to)
+    tos = (get_profile(pid) for pid in post.to).concat([get_profile(post.from)])
     send(like,tos)
 
   comment: (comment)->
     logger.debug("sending comment #{comment.toSource()}")
     post=get_post(comment.parent_id)
-    tos = (get_profile(pid) for pid in post.to)
+    tos = (get_profile(pid) for pid in post.to).concat([get_profile(post.from)])
     send(comment,tos)
 
   ake: (to)->

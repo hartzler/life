@@ -117,13 +117,13 @@ task :build do
   # build haml
   puts "Building haml..."
   Dir["src/haml/*.haml"].reject{|f| File.basename(f).match(/^[_.]/)}.each{|haml|
-    `haml -r #{File.join(Dir.pwd,'lib',"haml_helper.rb")} #{haml} #{Cfg.builddir}/xul/content/#{File.basename(haml,".haml")}.html`}
+    `haml -r #{File.join(Dir.pwd,'lib','build',"haml_helper.rb")} #{haml} #{Cfg.builddir}/xul/content/#{File.basename(haml,".haml")}.html`}
 
   # build coffee
   puts "Building coffee script..."
   Dir["src/coffee/*.coffee"].each do |f|
     puts f
-    `./#{Cfg.xulsdkdir}/bin/js -f lib/javascript/coffee-script.js -e "print(CoffeeScript.compile(read('#{f}')));" > #{Cfg.builddir}/xul/content/javascript/#{File.basename(f,'.coffee')}.js`
+    `./#{Cfg.xulsdkdir}/bin/js -f lib/build/coffee-script.js -e "print(CoffeeScript.compile(read('#{f}')));" > #{Cfg.builddir}/xul/content/javascript/#{File.basename(f,'.coffee')}.js`
   end
   
   # build sass
